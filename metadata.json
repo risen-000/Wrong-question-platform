@@ -1,0 +1,7 @@
+{
+  "name": "智学云 (SmartRevise)",
+  "description": "智能错题库与高效复习系统，利用AI识别题目，结合艾宾浩斯遗忘曲线进行科学复习。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
