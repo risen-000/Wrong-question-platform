@@ -158,26 +158,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onStartRandom, o
         </select>
       </div>
 
-      {/* 【终极诊断面板】直接输出内存中的数据状态，让问题无所遁形 */}
-      <div className="bg-black text-green-400 p-4 rounded font-mono text-xs mb-6 max-h-48 overflow-auto border-2 border-red-500 shadow-[0_0_15px_rgba(255,0,0,0.5)]">
-        <h3 className="text-red-500 font-bold text-sm mb-2 uppercase">🚨 终极核查面板 (彻底排查数据流断点) 🚨</h3>
-        {questions.length === 0 ? <p>正在获取数据，或数据库为空...</p> : (
-          questions.map(q => (
-            <div key={q.id} className="mb-2 border-b border-green-900 pb-2">
-              ID: {q.id} | 内容: {q.content?.substring(0, 10)}... | {' '}
-              <span className={q.image ? "text-yellow-400 font-bold" : "text-gray-500"}>
-                图片数据: {q.image ? `✔️存在 (${Math.round(q.image.length / 1024)}KB, 类型: ${typeof q.image}, 头部: ${q.image.substring(0, 25)})` : '❌ 无'}
-              </span>
-              {q.image && (
-                <div className="mt-2 bg-white/10 p-2">
-                  <p className="text-white mb-1">原生强制渲染测试 (无任何CSS遮挡):</p>
-                  <img src={q.image} style={{ display: 'block', maxWidth: '100%', maxHeight: '200px', border: '3px solid #00ff00' }} alt="强制渲染测试" />
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
+
 
       {/* List */}
       <div className="grid grid-cols-1 gap-4 overflow-y-auto pb-20">
