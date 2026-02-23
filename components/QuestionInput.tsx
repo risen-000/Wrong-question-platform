@@ -9,7 +9,7 @@ interface QuestionInputProps {
 }
 
 // 压缩图片到指定的最大宽高和质量，返回 base64 字符串
-async function compressImage(dataUrl: string, maxWidth = 1200, maxHeight = 1200, quality = 0.75): Promise<string> {
+async function compressImage(dataUrl: string, maxWidth = 1000, maxHeight = 1000, quality = 0.6): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
