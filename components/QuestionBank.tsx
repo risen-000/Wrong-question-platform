@@ -19,8 +19,9 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onStartRandom, o
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredQuestions = questions.filter(q => {
-    const matchesSearch = q.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
+    const contentStr = q.content || '';
+    const matchesSearch = contentStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (q.tags && q.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())));
     const matchesSubject = selectedSubject === 'all' || q.subject === selectedSubject;
     const matchesType = filterType === 'all' ||
       (filterType === 'mastered' && q.isMastered) ||

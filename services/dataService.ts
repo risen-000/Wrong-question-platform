@@ -62,6 +62,7 @@ function rowToReviewLog(row: any): ReviewLog {
 // ==================== Questions ====================
 
 export async function fetchQuestions(): Promise<Question[]> {
+    console.log('正在从 Supabase 获取题目...');
     const { data, error } = await supabase
         .from('questions')
         .select('*')
@@ -71,24 +72,39 @@ export async function fetchQuestions(): Promise<Question[]> {
         console.error('获取题目失败:', error);
         return [];
     }
+
+    console.log(`成功获取 ${data?.length || 0} 个题目`);
+    if (data && data.length > 0) {
+        const firstWithImg = data.find(r => r.image);
+        if (firstWithImg) {
+            console.log('检测到包含图片的题目:', firstWithImg.id, '图片长度:', firstWithImg.image.length);
+        } else {
+            console.log('获取到的所有题目均不包含图片数据');
+        }
+    }
+
     return (data || []).map(rowToQuestion);
 }
 
 export async function addQuestion(question: Question): Promise<boolean> {
+    console.log('尝试保存题目到 Supabase:', question.id);
+    if (question.image) {
+        console.log('包含题目图片, base64 长度:', question.image.length);
+    }
+
     // 插入时，RLS policy (default auth.uid()) 会自动填充 user_id
     const row = questionToRow(question);
-
-    // 显式去除非数据库字段（如果有），或者依赖 supabase 忽略多余字段
-    // 确保 user_id 不被手动篡改（虽然 RLS 会拦截，但最佳实践是不传）
 
     const { error } = await supabase
         .from('questions')
         .insert(row);
 
     if (error) {
-        console.error('添加题目失败:', error);
+        console.error('添加题目失败，详细错误:', error);
+        // 如果是列不存在，错误消息会很明显
         return false;
     }
+    console.log('题目保存成功');
     return true;
 }
 
