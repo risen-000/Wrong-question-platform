@@ -23,7 +23,7 @@ function questionToRow(q: Partial<Question>): Record<string, any> {
     if (q.isMastered !== undefined) row.is_mastered = q.isMastered;
     if (q.ef !== undefined) row.ef = q.ef;
     if (q.image !== undefined) row.image = q.image;
-    if (q.ansImage !== undefined) row.ans_image = q.ansImage;
+    if (q.ansImage !== undefined) row.ans_image = q.ansImage || null;
     if (q.isFromExample !== undefined) row.is_from_example = q.isFromExample;
     return row;
 }
@@ -46,7 +46,7 @@ function rowToQuestion(row: any): Question {
         isMastered: row.is_mastered,
         ef: row.ef,
         image: row.image,
-        ansImage: row.ans_image,
+        ansImage: row.ans_image || null,
         isFromExample: row.is_from_example,
     };
 }

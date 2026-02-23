@@ -1,0 +1,44 @@
+
+/* 智学云 - 核心样式 */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 即使没有文字也能显示的占位样式 */
+.math-display-empty::after {
+  content: "无文字描述";
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+/* 数学公式溢出处理 */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* 图片加载状态 */
+img:not([src]) {
+  visibility: hidden;
+}
+
+img[src=""] {
+  display: none;
+}
