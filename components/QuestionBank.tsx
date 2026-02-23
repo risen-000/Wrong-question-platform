@@ -16,6 +16,7 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onStartRandom, o
   const [filterType, setFilterType] = useState<string>('all');
   const [showRandomConfig, setShowRandomConfig] = useState(false);
   const [randomCount, setRandomCount] = useState(5);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredQuestions = questions.filter(q => {
     const matchesSearch = q.content.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -38,6 +39,10 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onStartRandom, o
     if (window.confirm('标记为已掌握后，该题目将暂时不再出现在日常复习队列中。确定吗？')) {
       onMaster(id);
     }
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => (prev === id ? null : id));
   };
 
   return (
@@ -130,10 +135,17 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onStartRandom, o
 
       {/* List */}
       <div className="grid grid-cols-1 gap-4 overflow-y-auto pb-20">
-        {filteredQuestions.map(q => (
-            <div key={q.id} className="bg-white p-5 rounded-xl border border-gray-100 hover:shadow-md transition-shadow group relative">
+        {filteredQuestions.map(q => {
+          const isExpanded = expandedId === q.id;
+          return (
+            <div key={q.id} className={`bg-white rounded-xl border transition-all duration-300 group relative ${isExpanded ? 'border-blue-200 shadow-lg' : 'border-gray-100 hover:shadow-md'}`}>
+              {/* Card Header - Always visible, click to expand */}
+              <div
+                className="p-5 cursor-pointer"
+                onClick={() => toggleExpand(q.id)}
+              >
                 <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                          <span className={`px-2 py-0.5 text-xs font-bold rounded ${q.type === QuestionType.WRONG_QUESTION ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
                              {q.type === QuestionType.WRONG_QUESTION ? '错题' : '例题'}
                          </span>
@@ -147,43 +159,102 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onStartRandom, o
                              </span>
                          )}
                     </div>
-                    <div className="flex items-center gap-3">
-                        {!q.isMastered && (
-                          <button 
-                            onClick={() => handleMaster(q.id)}
-                            className="text-xs font-bold text-google-green hover:bg-green-50 px-3 py-1 rounded-lg transition-colors border border-transparent hover:border-green-100"
-                          >
-                             标记掌握
-                          </button>
-                        )}
+                    <div className="flex items-center gap-2 ml-2 shrink-0">
                         <span className="text-xs text-gray-400">{new Date(q.createdAt).toLocaleDateString()}</span>
-                        <button 
-                            onClick={() => handleDelete(q.id)}
-                            className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 rounded-full transition-colors"
-                            title="删除题目"
-                        >
-                            <span className="material-icons-round text-lg">delete_outline</span>
-                        </button>
+                        <span className={`material-icons-round text-gray-400 text-lg transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                          expand_more
+                        </span>
                     </div>
                 </div>
                 
-                <div className="text-gray-800 mb-4 line-clamp-3">
+                {/* Question content - truncated when collapsed */}
+                <div className={`text-gray-800 ${isExpanded ? '' : 'line-clamp-3'}`}>
                     <MathDisplay text={q.content} />
                 </div>
 
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
-                    <div className="flex gap-2">
+                {/* Question image (if any) - shown when expanded */}
+                {isExpanded && q.image && (
+                  <div className="mt-4">
+                    <img src={q.image} alt="题目图片" className="max-w-full rounded-lg border border-gray-100 max-h-80 object-contain" />
+                  </div>
+                )}
+              </div>
+
+              {/* Expanded Detail Panel */}
+              {isExpanded && (
+                <div className="border-t border-blue-50 mx-5 pt-4 pb-5 space-y-4 animate-fade-in">
+                  {/* Answer Section */}
+                  <div className="bg-green-50 rounded-xl p-4">
+                    <h4 className="text-xs font-black text-green-700 uppercase mb-2 flex items-center gap-1">
+                      <span className="material-icons-round text-sm">task_alt</span>
+                      参考答案
+                    </h4>
+                    <div className="text-gray-800 text-sm leading-relaxed">
+                      <MathDisplay text={q.answer || '暂无答案'} />
+                    </div>
+                    {q.ansImage && (
+                      <img src={q.ansImage} alt="答案图片" className="mt-3 max-w-full rounded-lg border border-green-100 max-h-80 object-contain" />
+                    )}
+                  </div>
+
+                  {/* Analysis Section */}
+                  {q.analysis && (
+                    <div className="bg-blue-50 rounded-xl p-4">
+                      <h4 className="text-xs font-black text-blue-700 uppercase mb-2 flex items-center gap-1">
+                        <span className="material-icons-round text-sm">lightbulb</span>
+                        解题思路
+                      </h4>
+                      <div className="text-gray-700 text-sm leading-relaxed">
+                        <MathDisplay text={q.analysis} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Source & Meta */}
+                  {q.source && (
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                      <span className="material-icons-round text-xs">bookmark</span>
+                      来源：{q.source}
+                    </div>
+                  )}
+
+                  {/* Tags & Review Info */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex gap-2 flex-wrap">
                         {q.tags.map(t => (
                             <span key={t} className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">#{t}</span>
                         ))}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-gray-400 shrink-0">
                         <span className="material-icons-round text-sm">repeat</span>
                         复习 {q.reviewCount} 次
                     </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-1">
+                    {!q.isMastered && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleMaster(q.id); }}
+                        className="flex-1 text-xs font-bold text-google-green hover:bg-green-50 px-3 py-2 rounded-lg transition-colors border border-green-200 flex items-center justify-center gap-1"
+                      >
+                        <span className="material-icons-round text-sm">verified</span>
+                        标记为已掌握
+                      </button>
+                    )}
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
+                        className="text-xs font-bold text-red-400 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors border border-red-100 flex items-center gap-1"
+                    >
+                      <span className="material-icons-round text-sm">delete_outline</span>
+                      删除
+                    </button>
+                  </div>
                 </div>
+              )}
             </div>
-        ))}
+          );
+        })}
         {filteredQuestions.length === 0 && (
             <div className="text-center py-20 text-gray-400">
                 <span className="material-icons-round text-4xl mb-2">search_off</span>
