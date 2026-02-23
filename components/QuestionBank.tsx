@@ -159,6 +159,12 @@ const QuestionBank: React.FC<QuestionBankProps> = ({ questions, onStartRandom, o
                         <span className="material-icons-round text-xs">check</span> 已掌握
                       </span>
                     )}
+                    {/* Debug Indicator */}
+                    {q.image && (
+                      <span className="flex items-center gap-1 text-blue-600 text-[10px] font-black bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                        <span className="material-icons-round text-xs">image</span> DATA_HAS_IMAGE
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 ml-2 shrink-0">
                     <span className="text-xs text-gray-400">{new Date(q.createdAt).toLocaleDateString()}</span>
