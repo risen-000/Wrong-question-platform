@@ -8,10 +8,36 @@ interface QuestionInputProps {
   onCancel: () => void;
 }
 
+// 压缩图片到指定的最大宽高和质量，返回 base64 字符串
+async function compressImage(dataUrl: string, maxWidth = 1200, maxHeight = 1200, quality = 0.75): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+
+      // 按比例缩小
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
 const QuestionInput: React.FC<QuestionInputProps> = ({ onSave, onCancel }) => {
   const [activeTab, setActiveTab] = useState<'camera' | 'manual'>('camera');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [ansImagePreview, setAnsImagePreview] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ansInputRef = useRef<HTMLInputElement>(null);
 
@@ -23,15 +49,25 @@ const QuestionInput: React.FC<QuestionInputProps> = ({ onSave, onCancel }) => {
   const [currentTag, setCurrentTag] = useState('');
   const [source, setSource] = useState('');
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isAns: boolean) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, isAns: boolean) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsCompressing(true);
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      if (isAns) setAnsImagePreview(base64String);
-      else setImagePreview(base64String);
+    reader.onloadend = async () => {
+      const rawBase64 = reader.result as string;
+      try {
+        const compressed = await compressImage(rawBase64);
+        if (isAns) setAnsImagePreview(compressed);
+        else setImagePreview(compressed);
+      } catch {
+        // 压缩失败则使用原始数据
+        if (isAns) setAnsImagePreview(rawBase64);
+        else setImagePreview(rawBase64);
+      } finally {
+        setIsCompressing(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -81,16 +117,16 @@ const QuestionInput: React.FC<QuestionInputProps> = ({ onSave, onCancel }) => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Tab 导航保持原样 */}
+        {/* Tab 导航 */}
         <div className="flex border-b border-gray-100">
-          <button 
+          <button
             onClick={() => setActiveTab('camera')}
             className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${activeTab === 'camera' ? 'text-google-blue border-b-2 border-google-blue bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
           >
             <span className="material-icons-round text-lg">camera_alt</span>
             图片录入
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('manual')}
             className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${activeTab === 'manual' ? 'text-google-blue border-b-2 border-google-blue bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
           >
@@ -100,34 +136,46 @@ const QuestionInput: React.FC<QuestionInputProps> = ({ onSave, onCancel }) => {
         </div>
 
         <div className="p-4 md:p-8 space-y-6">
-          {/* 大图上传区域排版保持原样 */}
+          {/* 图片上传区域 */}
           {activeTab === 'camera' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div 
-                onClick={() => fileInputRef.current?.click()}
+              <div
+                onClick={() => !isCompressing && fileInputRef.current?.click()}
                 className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-google-blue hover:bg-blue-50/30 transition-all min-h-[160px] flex flex-col justify-center"
               >
                 <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={(e) => handleFileChange(e, false)} />
-                {imagePreview ? (
-                  <img src={imagePreview} className="max-h-32 mx-auto rounded-lg shadow-sm" />
+                {isCompressing && !ansImagePreview ? (
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <span className="material-icons-round text-3xl animate-spin">autorenew</span>
+                    <p className="text-sm font-bold">正在压缩图片...</p>
+                  </div>
+                ) : imagePreview ? (
+                  <img src={imagePreview} className="max-h-40 mx-auto rounded-lg shadow-sm object-contain" alt="题目图片" />
                 ) : (
                   <>
                     <span className="material-icons-round text-3xl text-gray-400 mb-2">add_a_photo</span>
                     <p className="text-gray-600 font-bold text-sm">上传题目照片</p>
+                    <p className="text-gray-400 text-xs mt-1">图片将自动压缩以节省空间</p>
                   </>
                 )}
               </div>
-              <div 
-                onClick={() => ansInputRef.current?.click()}
+              <div
+                onClick={() => !isCompressing && ansInputRef.current?.click()}
                 className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-google-blue hover:bg-blue-50/30 transition-all min-h-[160px] flex flex-col justify-center"
               >
                 <input type="file" accept="image/*" ref={ansInputRef} className="hidden" onChange={(e) => handleFileChange(e, true)} />
-                {ansImagePreview ? (
-                  <img src={ansImagePreview} className="max-h-32 mx-auto rounded-lg shadow-sm" />
+                {isCompressing && ansImagePreview === null ? (
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <span className="material-icons-round text-3xl animate-spin">autorenew</span>
+                    <p className="text-sm font-bold">正在压缩图片...</p>
+                  </div>
+                ) : ansImagePreview ? (
+                  <img src={ansImagePreview} className="max-h-40 mx-auto rounded-lg shadow-sm object-contain" alt="答案图片" />
                 ) : (
                   <>
                     <span className="material-icons-round text-3xl text-gray-400 mb-2">fact_check</span>
                     <p className="text-gray-600 font-bold text-sm">上传答案照片 (可选)</p>
+                    <p className="text-gray-400 text-xs mt-1">图片将自动压缩以节省空间</p>
                   </>
                 )}
               </div>
@@ -162,19 +210,19 @@ const QuestionInput: React.FC<QuestionInputProps> = ({ onSave, onCancel }) => {
                 ))}
               </div>
             </div>
-            <textarea 
-              value={content} onChange={(e) => setContent(e.target.value)} rows={4} 
-              className="w-full border-gray-200 rounded-xl p-4 focus:ring-google-blue text-sm" 
-              placeholder="在这里输入题目文字，公式请用 $ 包裹..." 
+            <textarea
+              value={content} onChange={(e) => setContent(e.target.value)} rows={4}
+              className="w-full border-gray-200 rounded-xl p-4 focus:ring-google-blue text-sm"
+              placeholder="在这里输入题目文字，公式请用 $ 包裹..."
             />
             {content && <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-dashed text-sm"><MathDisplay text={content} /></div>}
           </div>
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">解析与答案</label>
-            <textarea 
-              value={answer} onChange={(e) => setAnswer(e.target.value)} rows={3} 
-              className="w-full border-gray-200 rounded-xl p-4 focus:ring-google-blue text-sm" 
+            <textarea
+              value={answer} onChange={(e) => setAnswer(e.target.value)} rows={3}
+              className="w-full border-gray-200 rounded-xl p-4 focus:ring-google-blue text-sm"
               placeholder="记录解题思路或答案..."
             />
           </div>
@@ -187,16 +235,22 @@ const QuestionInput: React.FC<QuestionInputProps> = ({ onSave, onCancel }) => {
                 <button onClick={() => setTags(tags.filter(t => t !== tag))}><span className="material-icons-round text-[12px]">close</span></button>
               </span>
             ))}
-            <input 
-              type="text" value={currentTag} onChange={e => setCurrentTag(e.target.value)} onKeyDown={handleAddTag} 
+            <input
+              type="text" value={currentTag} onChange={e => setCurrentTag(e.target.value)} onKeyDown={handleAddTag}
               placeholder="+ 回车添加标签" className="border-none focus:ring-0 text-sm w-32 bg-transparent text-gray-400 italic"
             />
           </div>
         </div>
-        
+
         <div className="p-4 md:p-6 bg-gray-50 border-t flex justify-end gap-3">
-           <button onClick={onCancel} className="px-6 py-2 rounded-lg text-gray-600 font-bold">取消</button>
-           <button onClick={handleSave} className="px-10 py-2 rounded-lg bg-google-blue text-white font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all">保存到题库</button>
+          <button onClick={onCancel} className="px-6 py-2 rounded-lg text-gray-600 font-bold">取消</button>
+          <button
+            onClick={handleSave}
+            disabled={isCompressing}
+            className="px-10 py-2 rounded-lg bg-google-blue text-white font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isCompressing ? '处理图片中...' : '保存到题库'}
+          </button>
         </div>
       </div>
     </div>
